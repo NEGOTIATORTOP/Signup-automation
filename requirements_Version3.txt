@@ -1,0 +1,6 @@
+python-telegram-bot==20.7
+selenium==4.14.0
+imapclient==3.0.0
+pyzmail36==1.0.4
+pillow
+pytesseract
