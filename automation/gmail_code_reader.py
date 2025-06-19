@@ -1,5 +1,5 @@
 import imapclient
-import pyzmail36
+import mailparser
 import time
 import re
 
@@ -9,22 +9,18 @@ def get_latest_verification_code(email, password, subject_match="schools", timeo
         server.login(email, password)
         server.select_folder('INBOX')
         since = time.time()
-        code = None
         while time.time() - since < timeout:
             messages = server.search(['UNSEEN'])
             if not messages:
                 time.sleep(2)
                 continue
             latest_uid = messages[-1]
-            raw_message = server.fetch([latest_uid], ['BODY[]'])
-            message = pyzmail36.PyzMessage.factory(raw_message[latest_uid][b'BODY[]'])
-            subject = message.get_subject()
-            if subject_match.lower() in (subject or "").lower():
-                body = ""
-                if message.text_part:
-                    body = message.text_part.get_payload().decode(message.text_part.charset)
-                elif message.html_part:
-                    body = message.html_part.get_payload().decode(message.html_part.charset)
+            raw_message = server.fetch([latest_uid], ['RFC822'])
+            raw_email = raw_message[latest_uid][b'RFC822']
+            parsed = mailparser.parse_from_bytes(raw_email)
+            subject = parsed.subject or ""
+            if subject_match.lower() in subject.lower():
+                body = parsed.text_plain[0] if parsed.text_plain else parsed.body
                 code_match = re.search(r"\b\d{6}\b", body)
                 if code_match:
                     return code_match.group(0)
